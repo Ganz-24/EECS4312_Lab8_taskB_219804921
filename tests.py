@@ -84,3 +84,63 @@ def test_capacity_zero_all_waitlisted_and_promotion_never_happens():
 #################################################################################
 # Add your own additional tests here to cover more cases and edge cases as needed.
 #################################################################################
+
+def test_reregister_after_cancel():
+    """Edge case: user cancels then registers again."""
+    er = EventRegistration(capacity=1)
+
+    er.register("u1")
+    er.cancel("u1")
+
+    status = er.register("u1")
+
+    assert status == UserStatus("registered")
+    assert er.snapshot()["registered"] == ["u1"]
+
+
+def test_multiple_cancellations_with_multiple_promotions():
+    """Edge case: sequential cancellations causing multiple promotions."""
+    er = EventRegistration(capacity=2)
+
+    er.register("u1")
+    er.register("u2")
+    er.register("u3")
+    er.register("u4")
+
+    er.cancel("u1")
+    er.cancel("u2")
+
+    snap = er.snapshot()
+
+    assert snap["registered"] == ["u3", "u4"]
+    assert snap["waitlist"] == []
+
+
+def test_status_for_absent_user():
+    """Edge case: querying status of unknown user."""
+    er = EventRegistration(capacity=2)
+
+    er.register("u1")
+
+    assert er.status("unknown") == UserStatus("none")
+
+
+def test_waitlist_position_after_multiple_changes():
+    """Edge case: ensure waitlist positions remain contiguous."""
+    er = EventRegistration(capacity=1)
+
+    er.register("u1")
+    er.register("u2")
+    er.register("u3")
+    er.register("u4")
+
+    er.cancel("u3")
+
+    assert er.status("u2") == UserStatus("waitlisted", 1)
+    assert er.status("u4") == UserStatus("waitlisted", 2)
+
+
+def test_constructor_negative_capacity():
+    """Edge case: invalid capacity."""
+    with pytest.raises(ValueError):
+        EventRegistration(-1)

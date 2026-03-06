@@ -1,5 +1,5 @@
-## Student Name:
-## Student ID:
+## Student Name: Matthew Magagna
+## Student ID: 219804921
 
 """
 Task B: Event Registration with Waitlist (Stub)
@@ -44,7 +44,7 @@ class DuplicateRequest(Exception):
 
 
 class NotFound(Exception):
-    """Raised if a user cannot be found for cancellation (if required by handout)."""
+    """Raised if a user cannot be found for cancellation."""
     pass
 
 
@@ -63,8 +63,7 @@ class UserStatus:
 
 class EventRegistration:
     """
-    Students must implement this class per the lab handout.
-    Deterministic ordering is required (e.g., FIFO waitlist, predictable registration order).
+    Event registration system with deterministic ordering.
     """
 
     def __init__(self, capacity: int) -> None:
@@ -72,8 +71,12 @@ class EventRegistration:
         Args:
             capacity: maximum number of registered users (>= 0)
         """
-        # TODO: Initialize internal data structures
-        raise NotImplementedError("EventRegistration.__init__ not implemented yet")
+        if capacity < 0:
+            raise ValueError("capacity must be >= 0")
+
+        self.capacity = capacity
+        self.registered: List[str] = []
+        self.waitlist: List[str] = []
 
     def register(self, user_id: str) -> UserStatus:
         """
@@ -82,38 +85,69 @@ class EventRegistration:
           - else -> waitlisted (FIFO)
 
         Raises:
-            DuplicateRequest if user already exists (registered or waitlisted)
+            DuplicateRequest if user already exists
         """
-        # TODO: Implement per lab handout
-        raise NotImplementedError("register not implemented yet")
+
+        if user_id in self.registered or user_id in self.waitlist:
+            raise DuplicateRequest()
+
+        # Capacity zero means nobody can be registered
+        if self.capacity == 0 or len(self.registered) >= self.capacity:
+            self.waitlist.append(user_id)
+            return UserStatus("waitlisted", len(self.waitlist))
+
+        self.registered.append(user_id)
+        return UserStatus("registered")
 
     def cancel(self, user_id: str) -> None:
         """
         Cancel a user:
-          - if registered -> remove and promote earliest waitlisted user (if any)
+          - if registered -> remove and promote earliest waitlisted user
           - if waitlisted -> remove from waitlist
-          - behavior when user not found depends on handout (raise NotFound or ignore)
-
-        Raises:
-            NotFound (if required by handout)
+          - if absent -> raise NotFound
         """
-        # TODO: Implement per lab handout
-        raise NotImplementedError("cancel not implemented yet")
+
+        # Registered cancellation
+        if user_id in self.registered:
+            self.registered.remove(user_id)
+
+            # Promote earliest waitlisted user if capacity allows
+            if self.waitlist and len(self.registered) < self.capacity:
+                promoted = self.waitlist.pop(0)
+                self.registered.append(promoted)
+
+            return
+
+        # Waitlisted cancellation
+        if user_id in self.waitlist:
+            self.waitlist.remove(user_id)
+            return
+
+        raise NotFound()
 
     def status(self, user_id: str) -> UserStatus:
         """
         Return status of a user:
           - registered
-          - waitlisted with position (1-based)
+          - waitlisted with position
           - none
         """
-        # TODO: Implement per lab handout
-        raise NotImplementedError("status not implemented yet")
+
+        if user_id in self.registered:
+            return UserStatus("registered")
+
+        if user_id in self.waitlist:
+            position = self.waitlist.index(user_id) + 1
+            return UserStatus("waitlisted", position)
+
+        return UserStatus("none")
 
     def snapshot(self) -> dict:
         """
-        (Optional helper for debugging/tests)
-        Return a deterministic snapshot of internal state.
+        Return deterministic snapshot of internal state.
         """
-        # TODO: Implement if required/allowed
-        raise NotImplementedError("snapshot not implemented yet")
+
+        return {
+            "registered": list(self.registered),
+            "waitlist": list(self.waitlist),
+        }
