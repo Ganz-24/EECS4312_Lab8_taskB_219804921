@@ -1,0 +1,15 @@
+I’m working on a persona based requirements lab for a waitlist registration system. Jane wants predictable automated behavior and Mo cares about deterministic outcomes and explicit error handling. Can you help me think of examples of system constraints that could come from these kinds of persona needs?
+
+Purpose: Brainstorm possible constraints derived from persona attributes.
+
+Response summary:
+The LLM suggested constraints such as preserving FIFO ordering, automatically promoting the earliest waitlisted user after cancellation, ensuring deterministic outcomes for identical operation sequences, and raising explicit exceptions for invalid operations like duplicate registration.
+
+
+Prompt 2:
+I’m writing acceptance criteria and edge cases for an event registration system with a waitlist. The system has to support FIFO ordering, duplicate prevention, cancellations, and deterministic results. Can you help me check if the acceptance criteria format makes sense and suggest a few common edge cases I might want to include?
+
+Purpose: Check that acceptance criteria are testable and identify additional edge cases.
+
+Response summary:
+The LLM suggested using a clear Given When then structure and recommended edge cases such as duplicate registrations, cancellation of users not in the system, capacity equal to zero, and reindexing the waitlist after a user cancels.

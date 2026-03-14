@@ -1,39 +1,6 @@
 ## Student Name: Matthew Magagna
 ## Student ID: 219804921
 
-"""
-Task B: Event Registration with Waitlist (Stub)
-In this lab, you will design and implement an Event Registration with Waitlist system using an LLM assistant as your primary programming collaborator. 
-You are asked to implement a Python module that manages registration for a single event with a fixed capacity. 
-The system must:
-•	Accept a fixed capacity.
-•	Register users until capacity is reached.
-•	Place additional users into a FIFO waitlist.
-•	Automatically promote the earliest waitlisted user when a registered user cancels.
-•	Prevent duplicate registrations.
-•	Allow users to query their current status.
-
-The system must ensure that:
-•	The number of registered users never exceeds capacity.
-•	Waitlist ordering preserves FIFO behavior.
-•	Promotions occur deterministically under identical operation sequences.
-
-The module must preserve the following invariants:
-•	A user may not appear more than once in the system.
-•	A user may not simultaneously exist in multiple states.
-•	The system state must remain consistent after every operation.
-
-The system must correctly handle non-trivial scenarios such as:
-•	Multiple cancellations in sequence.
-•	Users attempting to re-register after canceling.
-•	Waitlisted users canceling before promotion.
-•	Capacity equal to zero.
-•	Simultaneous or rapid consecutive operations.
-•	Queries during state transitions.
-
-The output consists of the updated registration state and ordered lists of registered and waitlisted users after each operation.
-"""
-
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -63,7 +30,7 @@ class UserStatus:
 
 class EventRegistration:
     """
-    Event registration system with deterministic ordering.
+    Deterministic event registration system with FIFO waitlist.
     """
 
     def __init__(self, capacity: int) -> None:
@@ -80,57 +47,68 @@ class EventRegistration:
 
     def register(self, user_id: str) -> UserStatus:
         """
-        Register a user:
-          - if capacity available -> registered
-          - else -> waitlisted (FIFO)
+        Register a user.
+
+        - If capacity available -> user is registered.
+        - If capacity full or capacity == 0 -> user added to FIFO waitlist.
 
         Raises:
-            DuplicateRequest if user already exists
+            DuplicateRequest if user already exists in system.
         """
 
+        # Duplicate detection (FR5, C6)
         if user_id in self.registered or user_id in self.waitlist:
             raise DuplicateRequest()
 
-        # Capacity zero means nobody can be registered
+        # Capacity zero OR full → waitlist
         if self.capacity == 0 or len(self.registered) >= self.capacity:
             self.waitlist.append(user_id)
             return UserStatus("waitlisted", len(self.waitlist))
 
+        # Register directly
         self.registered.append(user_id)
         return UserStatus("registered")
 
     def cancel(self, user_id: str) -> None:
         """
-        Cancel a user:
-          - if registered -> remove and promote earliest waitlisted user
-          - if waitlisted -> remove from waitlist
-          - if absent -> raise NotFound
+        Cancel a user.
+
+        - Registered users are removed and the earliest waitlisted user
+          is promoted if capacity allows.
+        - Waitlisted users are removed and waitlist positions shift.
+        - If user not found → NotFound exception.
         """
 
         # Registered cancellation
         if user_id in self.registered:
             self.registered.remove(user_id)
 
-            # Promote earliest waitlisted user if capacity allows
+            # Promote earliest waitlisted user if capacity available
             if self.waitlist and len(self.registered) < self.capacity:
                 promoted = self.waitlist.pop(0)
+                # Promotion appended to preserve registered order (FR15)
                 self.registered.append(promoted)
 
             return
 
-        # Waitlisted cancellation
+        # Waitlist cancellation
         if user_id in self.waitlist:
             self.waitlist.remove(user_id)
+            # Python list removal automatically preserves order
+            # Status queries recompute contiguous 1-based positions (C8, C9)
             return
 
+        # User absent
         raise NotFound()
 
     def status(self, user_id: str) -> UserStatus:
         """
-        Return status of a user:
-          - registered
-          - waitlisted with position
-          - none
+        Return user status.
+
+        Returns:
+            UserStatus("registered")
+            UserStatus("waitlisted", position)
+            UserStatus("none")
         """
 
         if user_id in self.registered:
@@ -144,7 +122,7 @@ class EventRegistration:
 
     def snapshot(self) -> dict:
         """
-        Return deterministic snapshot of internal state.
+        Deterministic snapshot of system state.
         """
 
         return {

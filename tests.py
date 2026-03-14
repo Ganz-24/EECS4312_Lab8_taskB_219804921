@@ -144,3 +144,123 @@ def test_constructor_negative_capacity():
     """Edge case: invalid capacity."""
     with pytest.raises(ValueError):
         EventRegistration(-1)
+
+#### Lab 9 Test cases
+
+# Covers C1, C5, AC1, EC6
+def test_promotion_when_registered_user_cancels():
+    system = EventRegistration(1)
+
+    system.register("u1")
+    system.register("u2")
+    system.register("u3")
+
+    system.cancel("u1")
+
+    snapshot = system.snapshot()
+
+    assert snapshot["registered"] == ["u2"]
+    assert snapshot["waitlist"] == ["u3"]
+
+
+# Covers C2, AC2
+def test_waitlist_fifo_order_preserved():
+    system = EventRegistration(2)
+
+    system.register("u1")
+    system.register("u2")
+
+    system.register("u3")
+    system.register("u4")
+
+    snapshot = system.snapshot()
+
+    assert snapshot["waitlist"] == ["u3", "u4"]
+
+
+# Covers C3, AC3
+def test_status_registered_waitlisted_none():
+    system = EventRegistration(1)
+
+    system.register("u1")
+    system.register("u2")
+
+    assert system.status("u1") == UserStatus("registered")
+    assert system.status("u2") == UserStatus("waitlisted", 1)
+    assert system.status("u9") == UserStatus("none")
+
+
+# Covers C4, AC4
+def test_deterministic_snapshot_with_identical_operations():
+    system1 = EventRegistration(2)
+    system2 = EventRegistration(2)
+
+    operations = ["u1", "u2", "u3", "u4"]
+
+    for user in operations:
+        system1.register(user)
+        system2.register(user)
+
+    system1.cancel("u1")
+    system2.cancel("u1")
+
+    assert system1.snapshot() == system2.snapshot()
+
+
+# Covers C7, AC6, EC4
+def test_cancel_missing_user_raises_notfound():
+    system = EventRegistration(2)
+
+    system.register("u1")
+
+    with pytest.raises(NotFound):
+        system.cancel("u9")
+
+
+# Covers C8, C9, AC7, EC5
+def test_waitlist_reindex_after_middle_cancellation():
+    system = EventRegistration(1)
+
+    system.register("u1")
+    system.register("u2")
+    system.register("u3")
+    system.register("u4")
+
+    system.cancel("u3")
+
+    assert system.status("u2") == UserStatus("waitlisted", 1)
+    assert system.status("u4") == UserStatus("waitlisted", 2)
+
+
+# Covers C6, AC5, EC2
+def test_duplicate_registration_when_already_registered():
+    system = EventRegistration(2)
+
+    system.register("u1")
+
+    with pytest.raises(DuplicateRequest):
+        system.register("u1")
+
+
+# Covers C6, EC3
+def test_duplicate_registration_when_already_waitlisted():
+    system = EventRegistration(1)
+
+    system.register("u1")
+    system.register("u2")
+
+    with pytest.raises(DuplicateRequest):
+        system.register("u2")
+
+
+# Covers AC8, EC1
+def test_capacity_zero_all_users_waitlisted():
+    system = EventRegistration(0)
+
+    system.register("u1")
+    system.register("u2")
+
+    snapshot = system.snapshot()
+
+    assert snapshot["registered"] == []
+    assert snapshot["waitlist"] == ["u1", "u2"]
